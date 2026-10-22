@@ -32,7 +32,18 @@
         .movie h3 { position: relative; z-index: 1; margin: 0 0 9px; font-size: 19px; letter-spacing: -.02em; }
         .movie p { margin: 0; color: #b6b7c1; font-size: 14px; line-height: 1.55; }
         .message { grid-column: 1 / -1; padding: 24px; color: var(--muted); background: var(--panel); border: 1px solid #2c3040; border-radius: 14px; }
-        @media (max-width: 520px) { .shell { width: min(100% - 28px, 1000px); padding-top: 32px; } .toolbar { align-items: stretch; } label, select, button { width: 100%; } }
+        .chat { margin-top: 48px; padding: 22px; background: rgba(25, 28, 39, .86); border: 1px solid #2c3040; border-radius: 16px; }
+        .chat-intro { margin: 8px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+        .chat-log { display: grid; gap: 10px; max-height: 360px; overflow-y: auto; margin-bottom: 14px; }
+        .chat-bubble { max-width: 85%; padding: 12px 14px; border-radius: 13px; white-space: pre-wrap; line-height: 1.5; font-size: 14px; }
+        .chat-bubble.user { justify-self: end; color: #21180a; background: var(--accent); }
+        .chat-bubble.assistant, .chat-bubble.error { justify-self: start; color: var(--ink); background: #242837; border: 1px solid #383c4c; }
+        .chat-bubble.error { color: #ffb4a9; }
+        .chat-form { display: flex; gap: 10px; }
+        .chat-form input { flex: 1; min-width: 0; min-height: 46px; padding: 0 13px; color: var(--ink); background: #11141e; border: 1px solid #383c4c; border-radius: 10px; font: inherit; }
+        .chat-form input:focus-visible { outline: 3px solid #f5b84b88; outline-offset: 2px; }
+        .chat-form button:disabled { opacity: .6; cursor: wait; }
+        @media (max-width: 520px) { .shell { width: min(100% - 28px, 1000px); padding-top: 32px; } .toolbar { align-items: stretch; } label, select, button { width: 100%; } .chat-form { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -53,19 +64,34 @@
         </form>
         <div class="results-head"><h2>On the list</h2><span id="resultCount" aria-live="polite"></span></div>
         <section class="grid" id="movieList" aria-live="polite" aria-label="Movies"></section>
+        <section class="chat" aria-labelledby="chatTitle">
+            <h2 id="chatTitle">Ask the movie guide</h2>
+            <p class="chat-intro">Get recommendations and ask questions about the movies on this shelf.</p>
+            <div class="chat-log" id="chatLog" aria-live="polite" aria-label="Conversation"></div>
+            <form class="chat-form" id="chatForm">
+                <input id="chatInput" type="text" maxlength="2000" placeholder="What should I watch tonight?" autocomplete="off" aria-label="Your message" required>
+                <button id="chatSubmit" type="submit">Ask <span aria-hidden="true">→</span></button>
+            </form>
+        </section>
     </main>
 
     <script>
         const form = document.getElementById('filterForm');
         const list = document.getElementById('movieList');
         const count = document.getElementById('resultCount');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatLog = document.getElementById('chatLog');
+        const chatSubmit = document.getElementById('chatSubmit');
+        const chatHistory = [];
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:5001`;
 
         async function fetchMovies() {
             const category = document.getElementById('categorySelect').value;
             list.replaceChildren();
             count.textContent = 'Loading…';
             try {
-                const response = await fetch(`http://localhost:5001/api/movies?category=${encodeURIComponent(category)}`);
+                const response = await fetch(`${API_BASE}/api/movies?category=${encodeURIComponent(category)}`);
                 if (!response.ok) throw new Error('Could not load movies.');
                 const data = await response.json();
                 count.textContent = `${data.count} ${data.count === 1 ? 'film' : 'films'}`;
@@ -101,6 +127,49 @@
         }
 
         form.addEventListener('submit', event => { event.preventDefault(); fetchMovies(); });
+        function addChatMessage(role, content, isError = false) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${isError ? 'error' : role}`;
+            bubble.textContent = content;
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+            chatHistory.push({ role: 'user', content: message });
+            addChatMessage('user', message);
+            chatInput.value = '';
+            chatInput.disabled = true;
+            chatSubmit.disabled = true;
+            const pending = document.createElement('div');
+            pending.className = 'chat-bubble assistant';
+            pending.textContent = 'Thinking…';
+            chatLog.appendChild(pending);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatHistory.slice(-12) })
+                });
+                const data = await response.json();
+                pending.remove();
+                if (!response.ok) throw new Error(data.error || 'The assistant could not reply.');
+                chatHistory.push({ role: 'assistant', content: data.reply });
+                addChatMessage('assistant', data.reply);
+            } catch (error) {
+                pending.remove();
+                chatHistory.pop();
+                addChatMessage('assistant', error.message || 'Unable to reach the movie assistant. Please try again.', true);
+            } finally {
+                chatInput.disabled = false;
+                chatSubmit.disabled = false;
+                chatInput.focus();
+            }
+        });
         fetchMovies();
     </script>
 </body>
