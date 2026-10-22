@@ -2,52 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Movie Explorer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10131c">
+    <title>Reel Good — Movie Explorer</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f8; }
-        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        select, button { padding: 8px 12px; font-size: 14px; margin-right: 10px; }
-        ul { list-style-type: none; padding: 0; margin-top: 20px; }
-        li { background: #eef2f5; margin: 5px 0; padding: 10px; border-radius: 4px; }
+        :root { color-scheme: dark; --ink: #f5f4f1; --muted: #a6a6b2; --accent: #f5b84b; --panel: #191c27; }
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(ellipse at 50% -20%, #3b3150 0, transparent 48%), #10131c; }
+        .shell { width: min(100% - 40px, 1000px); margin: 0 auto; padding: 48px 0 72px; }
+        .topline { display: flex; align-items: center; gap: 10px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+        .topline span { width: 26px; height: 1px; background: var(--accent); }
+        h1 { margin: 20px 0 8px; font-size: clamp(38px, 7vw, 68px); line-height: .98; letter-spacing: -.055em; }
+        .intro { max-width: 510px; margin: 16px 0 30px; color: var(--muted); font-size: 16px; line-height: 1.65; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 16px; background: rgba(25, 28, 39, .86); border: 1px solid #2c3040; border-radius: 16px; }
+        label { display: grid; gap: 7px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+        select, button { min-height: 44px; border-radius: 10px; font: inherit; }
+        select { min-width: 190px; padding: 0 38px 0 13px; color: var(--ink); background: #11141e; border: 1px solid #383c4c; }
+        button { padding: 0 19px; color: #21180a; font-weight: 800; background: var(--accent); border: 0; cursor: pointer; transition: transform .15s, background .15s; }
+        button:hover { background: #ffd078; transform: translateY(-1px); }
+        button:focus-visible, select:focus-visible { outline: 3px solid #f5b84b88; outline-offset: 3px; }
+        .results-head { display: flex; justify-content: space-between; align-items: baseline; margin: 34px 2px 14px; }
+        h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+        #resultCount { color: var(--muted); font-size: 13px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 14px; }
+        .movie { position: relative; min-height: 170px; padding: 20px; overflow: hidden; background: linear-gradient(145deg, #202432, var(--panel) 70%); border: 1px solid #2c3040; border-radius: 15px; }
+        .movie::after { position: absolute; top: -35px; right: -30px; width: 110px; height: 110px; border: 1px solid #ffffff0b; border-radius: 50%; box-shadow: 0 0 0 18px #ffffff05, 0 0 0 36px #ffffff03; content: ""; pointer-events: none; }
+        .meta { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; color: var(--muted); font-size: 12px; }
+        .tag { padding: 5px 8px; color: var(--accent); background: #f5b84b16; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .movie h3 { position: relative; z-index: 1; margin: 0 0 9px; font-size: 19px; letter-spacing: -.02em; }
+        .movie p { margin: 0; color: #b6b7c1; font-size: 14px; line-height: 1.55; }
+        .message { grid-column: 1 / -1; padding: 24px; color: var(--muted); background: var(--panel); border: 1px solid #2c3040; border-radius: 14px; }
+        @media (max-width: 520px) { .shell { width: min(100% - 28px, 1000px); padding-top: 32px; } .toolbar { align-items: stretch; } label, select, button { width: 100%; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>🎬 Movie Category Explorer</h2>
-        <select id="categorySelect">
-            <option value="">All Categories</option>
-            <option value="drama">Drama</option>
-            <option value="comedy">Comedy</option>
-            <option value="thriller">Thriller</option>
-        </select>
-        <button onclick="fetchMovies()">Filter Movies</button>
-
-        <ul id="movieList"></ul>
-    </div>
+    <main class="shell">
+        <div class="topline"><span></span> The movie shelf</div>
+        <h1>Reel good<br>stories.</h1>
+        <p class="intro">A little collection of films worth settling in for. Pick a mood and find your next movie.</p>
+        <form class="toolbar" id="filterForm">
+            <label for="categorySelect">Browse by mood
+                <select id="categorySelect">
+                    <option value="">All categories</option>
+                    <option value="drama">Drama</option>
+                    <option value="comedy">Comedy</option>
+                    <option value="thriller">Thriller</option>
+                </select>
+            </label>
+            <button type="submit">Find a movie <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="results-head"><h2>On the list</h2><span id="resultCount" aria-live="polite"></span></div>
+        <section class="grid" id="movieList" aria-live="polite" aria-label="Movies"></section>
+    </main>
 
     <script>
+        const form = document.getElementById('filterForm');
+        const list = document.getElementById('movieList');
+        const count = document.getElementById('resultCount');
+
         async function fetchMovies() {
             const category = document.getElementById('categorySelect').value;
-            // Updated port to 5001
-            const response = await fetch(`http://localhost:5001/api/movies?category=${category}`);
-            const data = await response.json();
-
-            const list = document.getElementById('movieList');
-            list.innerHTML = '';
-
-            if (!data.movies || data.movies.length === 0) {
-                list.innerHTML = '<li>No movies found.</li>';
-                return;
+            list.replaceChildren();
+            count.textContent = 'Loading…';
+            try {
+                const response = await fetch(`http://localhost:5001/api/movies?category=${encodeURIComponent(category)}`);
+                if (!response.ok) throw new Error('Could not load movies.');
+                const data = await response.json();
+                count.textContent = `${data.count} ${data.count === 1 ? 'film' : 'films'}`;
+                if (!data.movies?.length) {
+                    list.innerHTML = '<p class="message">No movies in this category yet. Try another mood.</p>';
+                    return;
+                }
+                data.movies.forEach(movie => {
+                    const card = document.createElement('article');
+                    card.className = 'movie';
+                    const meta = document.createElement('div');
+                    meta.className = 'meta';
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.textContent = movie.category;
+                    const year = document.createElement('span');
+                    year.textContent = movie.year;
+                    const title = document.createElement('h3');
+                    title.textContent = movie.title;
+                    const description = document.createElement('p');
+                    description.textContent = movie.description || 'A great movie to add to your watch list.';
+                    meta.append(tag, year);
+                    card.append(meta, title, description);
+                    list.appendChild(card);
+                });
+            } catch (error) {
+                count.textContent = '';
+                const message = document.createElement('p');
+                message.className = 'message';
+                message.textContent = 'Unable to reach the movie service. Please try again in a moment.';
+                list.replaceChildren(message);
             }
-
-            data.movies.forEach(movie => {
-                const li = document.createElement('li');
-                li.textContent = `${movie.title} (${movie.year}) - [${movie.category.toUpperCase()}]`;
-                list.appendChild(li);
-            });
         }
 
-        // Initial load
+        form.addEventListener('submit', event => { event.preventDefault(); fetchMovies(); });
         fetchMovies();
     </script>
 </body>
