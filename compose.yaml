@@ -1,0 +1,57 @@
+services:
+  movie-db:
+    image: mongo:6.0
+    container_name: movie-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - movie-data:/data/db
+      - ./mongo/init.js:/docker-entrypoint-initdb.d/seed-movies.js:ro
+      - ./mongo/init.json:/docker-entrypoint-initdb.d/init.json:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ollama:
+      image: ollama/ollama
+      container_name: ollama
+      ports:
+        - "11434:11434"
+      volumes:
+        - ollama-data:/root/.ollama
+
+  movie-api:
+    image: movie-api:1.0.0
+    build:
+      context: ./backend
+    container_name: movie-api
+    environment:
+      MONGO_URI: mongodb://movie-db:27017/movies_db
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3.5:2b
+    ports:
+      - "5001:5000"
+    depends_on:
+      movie-db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  movie-ui:
+    image: movie-ui:1.0.0
+    build:
+      context: ./frontend
+    container_name: movie-ui
+    ports:
+      - "8181:80"
+    depends_on:
+      - movie-api
+
+  
+
+volumes:
+  movie-data:
+  ollama-data:
+      

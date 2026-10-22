@@ -1,0 +1,8 @@
+[
+  { "title": "The Shawshank Redemption", "category": "drama", "year": 1994, "description": "A banker forms an unlikely friendship while enduring a life sentence in prison." },
+  { "title": "The Dark Knight", "category": "thriller", "year": 2008, "description": "Batman faces the Joker, a criminal mastermind who throws Gotham into chaos." },
+  { "title": "Superbad", "category": "comedy", "year": 2007, "description": "Two high school friends scramble to make the most of a chaotic night before graduation." },
+  { "title": "Pulp Fiction", "category": "drama", "year": 1994, "description": "Interwoven stories of Los Angeles criminals, a boxer, and two hitmen unfold out of order." },
+  { "title": "The Hangover", "category": "comedy", "year": 2009, "description": "Three friends retrace a wild bachelor-party night to find the groom before his wedding." },
+  { "title": "Se7en", "category": "thriller", "year": 1995, "description": "Two detectives hunt a serial killer whose crimes are inspired by the seven deadly sins." }
+]

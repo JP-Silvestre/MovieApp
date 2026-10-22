@@ -1,0 +1,97 @@
+name: Build and publish Docker images
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-sonar:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build test runner image
+        run: docker build -f test-runner.Dockerfile -t movie-tests .
+
+      - name: Run tests and write JUnit report
+        run: |
+          mkdir -p "$RUNNER_TEMP/sonar-reports"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/tests:/tests/tests" \
+            -v "$RUNNER_TEMP/sonar-reports:/reports" \
+            movie-tests pytest -v \
+              --junitxml=/reports/test-results.xml \
+              tests/test_app.py mongo/test_db.py
+
+      - name: Run SonarQube analysis
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          docker run --rm --network host \
+            -e SONAR_HOST_URL \
+            -e SONAR_TOKEN \
+            -v "$GITHUB_WORKSPACE:/usr/src" \
+            -v "$RUNNER_TEMP/sonar-reports:/reports:ro" \
+            -w /usr/src \
+            sonarsource/sonar-scanner-cli \
+              -Dproject.settings=tests/sonar-project.properties \
+              -Dsonar.qualitygate.wait=true
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: test-and-sonar
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/movie-api
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=long
+
+      - name: Build and push movie-api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create UI image tags
+        id: ui-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/movie-ui
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=long
+
+      - name: Build and push movie-ui
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.ui-meta.outputs.tags }}
+          labels: ${{ steps.ui-meta.outputs.labels }}
