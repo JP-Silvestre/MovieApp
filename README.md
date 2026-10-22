@@ -10,6 +10,8 @@ The explorer is a lightweight, decoupled three-tier microservices application de
 
 **Database (movie-db):** A MongoDB 6.0 instance pre-seeded with initial movie documents using mongoimport. It persists data inside the movies_db database on standard port 27017.
 
+**Movie assistant:** The frontend sends chat messages to `POST /api/chat`. The Flask API reads the movie catalog from MongoDB and includes it with the recent conversation when it calls the Ollama chat API. The model does not read the database directly; the API supplies the catalog as context on each request. Compose pulls the configured `qwen3.5:2b` model before starting the API.
+
 | Service | Container Name | Technology | Internal Port | Host Port | Primary Function |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Frontend** | `movie-ui` | Nginx / HTML / JS | `80` | `8181` | Serves the UI to the client browser |

@@ -10,7 +10,7 @@ services:
       - ./mongo/init.json:/docker-entrypoint-initdb.d/init.json:ro
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
+      interval: 30s
       timeout: 3s
       retries: 10
 
@@ -22,6 +22,16 @@ services:
       volumes:
         - ollama-data:/root/.ollama
 
+  ollama-model:
+    image: ollama/ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull gemma3:1b"]
+    depends_on:
+      ollama:
+        condition: service_started
+
   movie-api:
     image: movie-api:1.0.0
     build:
@@ -30,7 +40,7 @@ services:
     environment:
       MONGO_URI: mongodb://movie-db:27017/movies_db
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: qwen3.5:2b
+      OLLAMA_MODEL: gemma3:1b
     ports:
       - "5001:5000"
     depends_on:
@@ -38,6 +48,8 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
+      ollama-model:
+        condition: service_completed_successfully
 
   movie-ui:
     image: movie-ui:1.0.0
