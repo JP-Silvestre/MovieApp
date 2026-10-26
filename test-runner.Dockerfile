@@ -5,7 +5,8 @@ WORKDIR /tests
 COPY backend/requirements.txt /tmp/backend-requirements.txt
 COPY mongo/requirements.txt /tmp/mongo-requirements.txt
 RUN pip install --no-cache-dir -r /tmp/backend-requirements.txt \
-    && pip install --no-cache-dir -r /tmp/mongo-requirements.txt
+    && pip install --no-cache-dir -r /tmp/mongo-requirements.txt \
+    && pip install --no-cache-dir pytest-cov==7.1.0
 
 COPY backend/ ./backend/
 COPY mongo/ ./mongo/
