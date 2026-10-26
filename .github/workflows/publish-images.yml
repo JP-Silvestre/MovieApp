@@ -32,7 +32,7 @@ jobs:
               --junitxml=/reports/test-results.xml \
               --cov=backend \
               --cov-report=xml:/reports/coverage.xml \
-              tests/test_app.py mongo/test_db.py
+              tests/ mongo/test_db.py
 
       - name: Run SonarQube analysis
         env:
