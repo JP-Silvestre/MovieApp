@@ -14,4 +14,4 @@ COPY tests/ ./tests/
 
 ENV PYTHONPATH=/usr/src/backend
 
-CMD ["pytest", "-v", "--junitxml=test-results.xml", "tests/test_app.py", "mongo/test_db.py"]
+CMD ["pytest", "-v", "--junitxml=test-results.xml", "tests/", "mongo/test_db.py"]
